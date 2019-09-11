@@ -218,6 +218,8 @@ impl TransactionPoolInner {
 
     pub fn total_unpacked(&self) -> usize { self.unpacked_transaction_count }
 
+    pub fn gc_queue_len(&self) -> usize { self.garbage_collection_queue.len() }
+
     pub fn get(&self, tx_hash: &H256) -> Option<Arc<SignedTransaction>> {
         self.txs.get(tx_hash).map(|x| x.clone())
     }

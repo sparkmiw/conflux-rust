@@ -31,10 +31,16 @@ use std::{collections::hash_map::HashMap, mem, ops::DerefMut, sync::Arc};
 use transaction_pool_inner::TransactionPoolInner;
 
 lazy_static! {
-    static ref TX_POOL_GAUGE: Arc<dyn Gauge<usize>> =
-        GaugeUsize::register_with_group("txpool", "unexecuted_size");
-    static ref TX_POOL_READY_GAUGE: Arc<dyn Gauge<usize>> =
-        GaugeUsize::register_with_group("txpool", "ready_size");
+    static ref READY_ACCOUNTS_GAUGE: Arc<dyn Gauge<usize>> =
+        GaugeUsize::register_with_group("txpool", "ready_accounts");
+    static ref DEFERRED_GAUGE: Arc<dyn Gauge<usize>> =
+        GaugeUsize::register_with_group("txpool", "deferred");
+    static ref RECEIVED_GAUGE: Arc<dyn Gauge<usize>> =
+        GaugeUsize::register_with_group("txpool", "received");
+    static ref UNPACKED_GAUGE: Arc<dyn Gauge<usize>> =
+        GaugeUsize::register_with_group("txpool", "unpacked");
+    static ref GARBAGE_QUEUE_SIZE_GAUGE: Arc<dyn Gauge<usize>> =
+        GaugeUsize::register_with_group("txpool", "gc_queue_size");
     static ref TX_POOL_INSERT_TIMER: Arc<dyn Meter> =
         register_meter_with_group("timer", "tx_pool::insert_new_tx");
     static ref TX_POOL_RECOVER_TIMER: Arc<dyn Meter> =
@@ -151,8 +157,13 @@ impl TransactionPool {
                 }
             }
         }
-        TX_POOL_GAUGE.update(self.total_unpacked());
-        TX_POOL_READY_GAUGE.update(self.inner.read().total_ready_accounts());
+        READY_ACCOUNTS_GAUGE.update(self.total_ready_accounts());
+        DEFERRED_GAUGE.update(self.total_deferred());
+        RECEIVED_GAUGE.update(self.total_received());
+        UNPACKED_GAUGE.update(self.total_unpacked());
+
+        let inner = self.inner.read();
+        GARBAGE_QUEUE_SIZE_GAUGE.update(inner.gc_queue_len());
 
         (passed_transactions, failure)
     }
